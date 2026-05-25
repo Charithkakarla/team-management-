@@ -6,9 +6,12 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { Router } from "express";
 import { User } from "../dataModels/User.js";
+import { Membership } from "../dataModels/Membership.js";
+import { Role } from "../dataModels/Role.js";
 import { AppError } from "../shared/AppError.js";
 import { asyncHandler } from "../shared/asyncHandler.js";
 import { getAdminEmail, isCEOEmail, isManagerEmail } from "../shared/access.js";
+import { requireAuth } from "../middleware/auth.js";
 
 const createToken = (user) =>
   jwt.sign(
@@ -27,6 +30,7 @@ const sanitizeUser = (user) => ({
   name: user.name,
   email: user.email,
   isAdmin: isCEOEmail(user.email),
+  // isManager here remains the email-rule fallback; call /auth/me for dynamic membership-aware status
   isManager: isManagerEmail(user.email),
   createdAt: user.createdAt,
   updatedAt: user.updatedAt
@@ -72,6 +76,32 @@ export const loginUser = async ({ email, password }) => {
 
 export const verifyToken = (token) => jwt.verify(token, process.env.JWT_SECRET || "dev-secret");
 
+export const getCurrentUserFromDb = async (userId) => {
+  const user = await User.findById(userId);
+  if (!user) throw new AppError('User not found', 404);
+
+  const memberships = await Membership.find({ userId }).populate('roleId');
+  let dynamicIsManager = false;
+  for (const m of memberships) {
+    if (m.roleId) {
+      if ((m.roleId.name && m.roleId.name.toLowerCase() === 'manager') || (m.roleId.permissions || []).includes('MANAGE_USERS')) {
+        dynamicIsManager = true;
+        break;
+      }
+    }
+  }
+
+  return {
+    id: user._id,
+    name: user.name,
+    email: user.email,
+    isAdmin: isCEOEmail(user.email),
+    isManager: dynamicIsManager || isManagerEmail(user.email),
+    createdAt: user.createdAt,
+    updatedAt: user.updatedAt
+  };
+};
+
 const registerController = asyncHandler(async (req, res) => {
   const result = await registerUser(req.body);
   res.status(201).json({ user: sanitizeUser(result.user), token: result.token });
@@ -86,3 +116,11 @@ export const authRouter = Router();
 
 authRouter.post("/register", registerController);
 authRouter.post("/login", loginController);
+
+const getCurrentController = asyncHandler(async (req, res) => {
+  const decoded = req.authUser;
+  const current = await getCurrentUserFromDb(decoded.sub);
+  res.json({ user: current });
+});
+
+authRouter.get('/me', requireAuth, getCurrentController);

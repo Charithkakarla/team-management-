@@ -15,7 +15,7 @@ const DataContext = createContext(null);
 const parseError = (error) => error?.response?.data?.message || error?.message || 'Something went wrong';
 
 export const DataProvider = ({ children }) => {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, refreshUser } = useAuth();
   const toast = useToast();
   const [users, setUsers] = useState([]);
   const [teams, setTeams] = useState([]);
@@ -84,7 +84,21 @@ export const DataProvider = ({ children }) => {
       updateRolePermissions: (roleId, permissions) => refreshAfterMutation('Permissions updated', () => updateRolePermissionsRequest(roleId, permissions)),
       addUserToTeam: (payload) => refreshAfterMutation('User added to team', () => addUserToTeamRequest(payload)),
       removeUserFromTeam: (payload) => refreshAfterMutation('Membership removed', () => removeUserFromTeamRequest(payload)),
-      assignRole: (payload) => refreshAfterMutation('Role assigned', () => assignRoleRequest(payload)),
+      assignRole: async (payload) => {
+        try {
+          const res = await assignRoleRequest(payload);
+          toast.success('Role assigned');
+          await refreshDirectory();
+          // If the role change affected the currently logged-in user, refresh their profile
+          if (res?.data?.userId?._id && user?.id && res.data.userId._id === user.id && refreshUser) {
+            await refreshUser();
+          }
+          return res.data;
+        } catch (error) {
+          toast.error(parseError(error));
+          throw error;
+        }
+      },
       updateRole: (payload) => refreshAfterMutation('Role updated', () => updateRoleRequest(payload)),
       createTask: (payload) => refreshAfterMutation('Task created', () => createTaskRequest(payload)),
       updateTask: (id, payload) => refreshAfterMutation('Task updated', () => updateTaskRequest(id, payload)),

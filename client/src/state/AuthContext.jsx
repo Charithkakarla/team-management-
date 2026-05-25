@@ -2,7 +2,7 @@
 // It handles login, register, and logout state.
 // Use this file to understand session persistence on the client.
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
-import { login as loginRequest, register as registerRequest } from '../api/authService';
+import { login as loginRequest, register as registerRequest, getCurrent as getCurrentRequest } from '../api/authService';
 
 const AuthContext = createContext(null);
 
@@ -45,6 +45,15 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const refreshUser = async () => {
+    try {
+      const res = await getCurrentRequest();
+      if (res?.data?.user) setUser(res.data.user);
+    } catch (err) {
+      // ignore and keep current user
+    }
+  };
+
   const value = useMemo(
     () => ({
       user,
@@ -53,6 +62,7 @@ export const AuthProvider = ({ children }) => {
       isAuthenticated: Boolean(token),
       login: (payload) => authAction(loginRequest, payload),
       register: (payload) => authAction(registerRequest, payload),
+      refreshUser,
       logout: () => {
         setUser(null);
         setToken('');

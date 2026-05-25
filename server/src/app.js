@@ -11,12 +11,25 @@ export const createApp = () => {
   const app = express();
 
   const allowedOrigin = process.env.CLIENT_URL || true;
+  const extraAllowedOrigins = (process.env.CORS_ORIGINS || "")
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean);
   const localOriginPattern = /^https?:\/\/(localhost|127\.0\.0\.1):\d+$/;
+  const vercelOriginPattern = /^https:\/\/[^\s]+\.vercel\.app$/;
+
+  const isAllowedOrigin = (origin) =>
+    !origin ||
+    allowedOrigin === true ||
+    origin === allowedOrigin ||
+    localOriginPattern.test(origin) ||
+    vercelOriginPattern.test(origin) ||
+    extraAllowedOrigins.includes(origin);
 
   app.use(
     cors({
       origin: (origin, callback) => {
-        if (!origin || allowedOrigin === true || origin === allowedOrigin || localOriginPattern.test(origin)) {
+        if (isAllowedOrigin(origin)) {
           callback(null, true);
           return;
         }
