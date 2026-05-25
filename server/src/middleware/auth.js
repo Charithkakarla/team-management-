@@ -1,5 +1,8 @@
-import { AppError } from "../utils/AppError.js";
-import { verifyToken } from "../services/authService.js";
+// Auth middleware: validates bearer tokens and attaches the decoded user.
+// It blocks requests without a valid JWT.
+// Use this file to understand request authentication.
+import { AppError } from "../shared/AppError.js";
+import { verifyToken } from "../features/auth.js";
 
 export const requireAuth = (req, res, next) => {
   const authHeader = req.headers.authorization || "";

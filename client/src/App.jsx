@@ -1,9 +1,12 @@
 import { BrowserRouter } from 'react-router-dom';
-import { ThemeProvider } from './context/ThemeContext';
-import { AuthProvider } from './context/AuthContext';
-import { ToastProvider } from './context/ToastContext';
-import { DataProvider } from './context/DataContext';
-import { AppRoutes } from './routes/AppRoutes';
+// App root: wires providers and the route tree for the client.
+// It sets up theme, auth, toast, and data providers.
+// Use this file to see how the whole client boots.
+import { ThemeProvider } from './state/ThemeContext';
+import { AuthProvider } from './state/AuthContext';
+import { ToastProvider } from './state/ToastContext';
+import { DataProvider } from './state/DataContext';
+import { AppRoutes } from './navigation/AppRoutes';
 
 const Providers = ({ children }) => (
   <ThemeProvider>

@@ -1,3 +1,6 @@
+// Error middleware: returns not-found and formatted API errors.
+// It handles missing routes and other API failures.
+// Use this file to understand server-side error responses.
 export const notFound = (req, res, next) => {
   res.status(404);
   next(new Error(`Not found - ${req.originalUrl}`));

@@ -9,8 +9,13 @@ A production-style MERN monorepo for managing users, teams, roles, memberships, 
 
 ## Structure
 
-- `client/` - React dashboard app
-- `server/` - Express + MongoDB API
+- `client/src/ui/core.jsx` - shared buttons, cards, inputs, tables, modals, and other repeatable UI pieces
+- `client/src/navigation/guards.jsx` - all route protection in one place
+- `client/src/ui/Sidebar.jsx`, `client/src/ui/Navbar.jsx`, `client/src/ui/FloatingAssistant.jsx` - the main dashboard shell
+- `client/src/views/` - page-level screens such as login, dashboard, users, teams, tasks, roles, and permissions
+- `server/src/features/` - grouped backend features for auth, users, teams, roles, permissions, memberships, tasks, and chat
+- `server/src/routes.js` - one registry file that mounts every API route
+- `server/src/shared/`, `server/src/middleware/`, `server/src/dataModels/` - shared helpers, auth/error middleware, and MongoDB models
 
 ## Setup
 
@@ -41,3 +46,7 @@ A production-style MERN monorepo for managing users, teams, roles, memberships, 
 - Permissions resolve as `user + team -> role -> permissions`.
 - If a user has no role for a team, the permissions API returns an empty array.
 - The dashboard includes protected routes, dark/light mode, toast notifications, and responsive navigation.
+- Privileged accounts are seeded through `server/.env`: `ADMIN_EMAIL` and `MANAGER_EMAIL`.
+- Store secret keys only in `server/.env`; do not add API keys to the client.
+- Most reusable UI now lives in one shared file to keep the project easier to explain and maintain.
+- The backend is grouped by feature now, so each file maps to one topic instead of splitting the same idea across service, controller, and route folders.
