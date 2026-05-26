@@ -2,9 +2,9 @@
 // It is the main work area for task management.
 // Use this file to understand task workflows.
 import { useMemo, useState } from 'react';
-import { CheckCircle2, Circle, Plus, RotateCcw, Trash2 } from 'lucide-react';
+import { CheckCircle2, Pencil, Plus, RotateCcw, Trash2 } from 'lucide-react';
 import { Card, Button, Input, Textarea, Select, Table, Badge, EmptyState, Modal } from '../ui/core';
-import { useData } from '../state/DataContext';
+import { useData } from '../hooks/useData';
 import { useAuth } from '../hooks/useAuth';
 
 export const TasksPage = () => {
@@ -91,19 +91,37 @@ export const TasksPage = () => {
                 <Badge tone={task.status === 'done' ? 'success' : 'primary'}>{task.status}</Badge>
               </td>
               <td className="px-4 py-4">
-                <div className="flex flex-wrap gap-2">
-                  <Button variant="secondary" size="sm" onClick={() => (task.status === 'done' ? undoTask(task._id) : completeTask(task._id))}>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    className="h-9 w-9 p-0"
+                    title={task.status === 'done' ? 'Undo task' : 'Mark task complete'}
+                    aria-label={task.status === 'done' ? 'Undo task' : 'Mark task complete'}
+                    onClick={() => (task.status === 'done' ? undoTask(task._id) : completeTask(task._id))}
+                  >
                     {task.status === 'done' ? <RotateCcw className="h-4 w-4" /> : <CheckCircle2 className="h-4 w-4" />}
-                    {task.status === 'done' ? 'Undo' : 'Complete'}
                   </Button>
-                  <Button variant="secondary" size="sm" onClick={() => openEdit(task)}>
-                    <Circle className="h-4 w-4" />
-                    Edit
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    className="h-9 w-9 p-0"
+                    title="Edit task"
+                    aria-label="Edit task"
+                    onClick={() => openEdit(task)}
+                  >
+                    <Pencil className="h-4 w-4" />
                   </Button>
                   {(user?.isAdmin || task.createdById?._id === user?.id) ? (
-                    <Button variant="destructive" size="sm" onClick={() => deleteTask(task._id)}>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      className="h-9 w-9 p-0"
+                      title="Delete task"
+                      aria-label="Delete task"
+                      onClick={() => deleteTask(task._id)}
+                    >
                       <Trash2 className="h-4 w-4" />
-                      Delete
                     </Button>
                   ) : null}
                 </div>

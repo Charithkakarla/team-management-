@@ -18,6 +18,7 @@ const createToken = (user) =>
     {
       sub: user._id.toString(),
       email: user.email,
+      isSuperAdmin: isCEOEmail(user.email),
       isAdmin: isCEOEmail(user.email),
       isManager: isManagerEmail(user.email)
     },
@@ -29,6 +30,7 @@ const sanitizeUser = (user) => ({
   id: user._id,
   name: user.name,
   email: user.email,
+  isSuperAdmin: isCEOEmail(user.email),
   isAdmin: isCEOEmail(user.email),
   // isManager here remains the email-rule fallback; call /auth/me for dynamic membership-aware status
   isManager: isManagerEmail(user.email),
@@ -95,6 +97,7 @@ export const getCurrentUserFromDb = async (userId) => {
     id: user._id,
     name: user.name,
     email: user.email,
+    isSuperAdmin: isCEOEmail(user.email),
     isAdmin: isCEOEmail(user.email),
     isManager: dynamicIsManager || isManagerEmail(user.email),
     createdAt: user.createdAt,

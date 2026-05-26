@@ -6,7 +6,9 @@ import { verifyToken } from "../features/auth.js";
 
 export const requireAuth = (req, res, next) => {
   const authHeader = req.headers.authorization || "";
-  const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
+  const headerToken = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
+  const queryToken = typeof req.query?.token === "string" ? req.query.token : null;
+  const token = headerToken || queryToken;
 
   if (!token) {
     return next(new AppError("Unauthorized", 401));

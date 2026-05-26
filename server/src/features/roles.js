@@ -6,7 +6,7 @@ import { Router } from "express";
 import { Role } from "../dataModels/Role.js";
 import { AppError } from "../shared/AppError.js";
 import { asyncHandler } from "../shared/asyncHandler.js";
-import { requireAdmin, requirePrivileged } from "../middleware/access.js";
+import { requirePrivileged, requireSuperAdmin } from "../middleware/access.js";
 
 export const createRole = async ({ name, permissions = [] }) => {
   if (!name) {
@@ -45,6 +45,6 @@ const updateRolePermissionsController = asyncHandler(async (req, res) => {
 
 export const rolesRouter = Router();
 
-rolesRouter.post("/", requireAdmin, createRoleController);
+rolesRouter.post("/", requireSuperAdmin, createRoleController);
 rolesRouter.get("/", requirePrivileged, getRolesController);
-rolesRouter.put("/:id/permissions", requireAdmin, updateRolePermissionsController);
+rolesRouter.put("/:id/permissions", requireSuperAdmin, updateRolePermissionsController);

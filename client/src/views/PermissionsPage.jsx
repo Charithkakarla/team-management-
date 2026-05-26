@@ -4,7 +4,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { RefreshCw, Plus, Trash2, Shield } from 'lucide-react';
 import { Card, Button, Input, Select, EmptyState } from '../ui/core';
-import { useData } from '../state/DataContext';
+import { useData } from '../hooks/useData';
 import { fetchPermissions } from '../api/permissionService';
 import { useToast } from '../hooks/useToast';
 

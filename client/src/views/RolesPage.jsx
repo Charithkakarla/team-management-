@@ -5,7 +5,7 @@ import { useMemo, useState } from 'react';
 import { Plus, Pencil } from 'lucide-react';
 import { Card, Button, Input, Modal, Table, Badge, EmptyState } from '../ui/core';
 import { PERMISSIONS } from '../constants/permissions';
-import { useData } from '../state/DataContext';
+import { useData } from '../hooks/useData';
 
 const defaultForm = { name: '', permissions: [] };
 
@@ -89,9 +89,15 @@ export const RolesPage = () => {
                 </div>
               </td>
               <td className="px-4 py-4">
-                <Button variant="secondary" size="sm" onClick={() => openEdit(role)}>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="h-9 w-9 p-0"
+                  title="Edit role"
+                  aria-label="Edit role"
+                  onClick={() => openEdit(role)}
+                >
                   <Pencil className="h-4 w-4" />
-                  Edit
                 </Button>
               </td>
             </tr>

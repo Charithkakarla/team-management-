@@ -5,8 +5,7 @@
 import { Router } from "express";
 import { Membership } from "../dataModels/Membership.js";
 import { asyncHandler } from "../shared/asyncHandler.js";
-import { isAdminEmail } from "../shared/access.js";
-import { requireAdmin } from "../middleware/access.js";
+import { isAdminEmail, isPrivilegedEmail } from "../shared/access.js";
 
 export const resolvePermissionsForUserTeam = async ({ userId, teamId, email }) => {
   if (isAdminEmail(email)) {
@@ -23,10 +22,22 @@ export const resolvePermissionsForUserTeam = async ({ userId, teamId, email }) =
 };
 
 const getPermissionsController = asyncHandler(async (req, res) => {
+  const requestingUserId = req.authUser.sub;
+  const targetUserId = req.params.userId;
+
+  const allowed =
+    requestingUserId === targetUserId ||
+    isAdminEmail(req.authUser.email) ||
+    isPrivilegedEmail(req.authUser.email);
+
+  if (!allowed) {
+    return res.status(403).json({ message: 'Forbidden' });
+  }
+
   const permissions = await resolvePermissionsForUserTeam({ ...req.params, email: req.authUser.email });
   res.json({ userId: req.params.userId, teamId: req.params.teamId, permissions });
 });
 
 export const permissionsRouter = Router();
 
-permissionsRouter.get("/:userId/:teamId", requireAdmin, getPermissionsController);
+permissionsRouter.get('/:userId/:teamId', getPermissionsController);

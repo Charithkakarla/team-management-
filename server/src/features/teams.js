@@ -6,7 +6,7 @@ import { Router } from "express";
 import { Team } from "../dataModels/Team.js";
 import { AppError } from "../shared/AppError.js";
 import { asyncHandler } from "../shared/asyncHandler.js";
-import { requireAdmin, requirePrivileged } from "../middleware/access.js";
+import { requirePrivileged, requireSuperAdmin } from "../middleware/access.js";
 
 export const createTeam = async ({ name, description = "" }) => {
   if (!name) {
@@ -30,5 +30,5 @@ const getTeamsController = asyncHandler(async (req, res) => {
 
 export const teamsRouter = Router();
 
-teamsRouter.post("/", requireAdmin, createTeamController);
+teamsRouter.post("/", requireSuperAdmin, createTeamController);
 teamsRouter.get("/", requirePrivileged, getTeamsController);

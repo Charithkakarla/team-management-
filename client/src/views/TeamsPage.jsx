@@ -4,7 +4,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Plus, Users, Trash2 } from 'lucide-react';
 import { Card, Button, Input, Textarea, Modal, Table, EmptyState, Badge } from '../ui/core';
-import { useData } from '../state/DataContext';
+import { useData } from '../hooks/useData';
 import { fetchTeamMembers, removeUserFromTeam } from '../api/membershipService';
 import { useAuth } from '../hooks/useAuth';
 import { useToast } from '../hooks/useToast';
@@ -140,6 +140,9 @@ export const TeamsPage = () => {
                     <Button
                       size="sm"
                       variant="secondary"
+                      className="h-9 w-9 p-0"
+                      title="Remove member"
+                      aria-label="Remove member"
                       onClick={async () => {
                         await removeUserFromTeam({ userId: membership.userId?._id, teamId: selectedTeamId });
                         toast.success('Member removed from team');
@@ -147,7 +150,6 @@ export const TeamsPage = () => {
                       }}
                     >
                       <Trash2 className="h-4 w-4" />
-                      Remove
                     </Button>
                   ) : null}
                 </div>

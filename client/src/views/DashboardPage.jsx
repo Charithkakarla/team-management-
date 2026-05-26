@@ -3,7 +3,7 @@
 // Use this file to understand the home dashboard.
 import { Users, FolderKanban, ShieldCheck, KeyRound, CheckSquare } from 'lucide-react';
 import { Card, Badge, Table, StatCard, Skeleton } from '../ui/core';
-import { useData } from '../state/DataContext';
+import { useData } from '../hooks/useData';
 import { useAuth } from '../hooks/useAuth';
 
 const recentColumns = [

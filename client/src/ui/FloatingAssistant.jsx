@@ -6,7 +6,7 @@ import { Bot, Send, X } from 'lucide-react';
 import { Button } from './core';
 import { cn } from '../shared/cn';
 import { sendChatMessage } from '../api/chatService';
-import { useData } from '../state/DataContext';
+import { useData } from '../hooks/useData';
 import { useAuth } from '../hooks/useAuth';
 
 const parseCommand = (message) => {

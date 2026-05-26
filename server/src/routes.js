@@ -11,6 +11,7 @@ import { membershipsRouter } from "./features/memberships.js";
 import { permissionsRouter } from "./features/permissions.js";
 import { tasksRouter } from "./features/tasks.js";
 import { chatRouter } from "./features/chat.js";
+import { realtimeRouter } from "./features/realtime.js";
 
 const apiRouter = Router();
 
@@ -21,6 +22,7 @@ apiRouter.use("/memberships", membershipsRouter);
 apiRouter.use("/permissions", permissionsRouter);
 apiRouter.use("/tasks", tasksRouter);
 apiRouter.use("/chat", chatRouter);
+apiRouter.use("/realtime", realtimeRouter);
 
 export const authRoutes = authRouter;
 export const apiRoutes = apiRouter;

@@ -1,21 +1,35 @@
-// Access middleware: enforces CEO-only and privileged permissions.
+// Access middleware: enforces superadmin-only and privileged permissions.
 // It checks whether the current user is allowed to continue.
 // Use this file to understand role-based route protection.
 import { AppError } from '../shared/AppError.js';
-import { isCEOEmail, isPrivilegedEmail } from '../shared/access.js';
+import { hasManagerAccess, isCEOEmail, isManagerEmail, isSuperAdminEmail } from '../shared/access.js';
 
-export const requireAdmin = (req, res, next) => {
-  if (isCEOEmail(req.authUser?.email)) {
+export const requireSuperAdmin = (req, res, next) => {
+  if (isSuperAdminEmail(req.authUser?.email)) {
     return next();
   }
 
   return next(new AppError('Forbidden', 403));
 };
 
+export const requireAdmin = (req, res, next) => {
+  return requireSuperAdmin(req, res, next);
+};
+
 export const requirePrivileged = (req, res, next) => {
-  if (isPrivilegedEmail(req.authUser?.email)) {
+  const email = req.authUser?.email;
+
+  if (isSuperAdminEmail(email) || isManagerEmail(email)) {
     return next();
   }
 
-  return next(new AppError('Forbidden', 403));
+  hasManagerAccess(req.authUser?.sub)
+    .then((allowed) => {
+      if (allowed) {
+        return next();
+      }
+
+      return next(new AppError('Forbidden', 403));
+    })
+    .catch(() => next(new AppError('Forbidden', 403)));
 };

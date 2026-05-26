@@ -1,7 +1,7 @@
 // Data state: loads and mutates users, teams, roles, and tasks.
 // It refreshes shared data after each create or update action.
 // Use this file to see how dashboard data is fetched.
-import { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, useCallback, useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { useToast } from '../hooks/useToast';
 import { fetchUsers, createUser as createUserRequest } from '../api/userService';
@@ -10,7 +10,7 @@ import { fetchRoles, createRole as createRoleRequest, updateRolePermissions as u
 import { addUserToTeam as addUserToTeamRequest, removeUserFromTeam as removeUserFromTeamRequest, assignRole as assignRoleRequest, updateRole as updateRoleRequest } from '../api/membershipService';
 import { fetchTasks, createTask as createTaskRequest, updateTask as updateTaskRequest, completeTask as completeTaskRequest, undoTask as undoTaskRequest, deleteTask as deleteTaskRequest } from '../api/taskService';
 
-const DataContext = createContext(null);
+export const DataContext = createContext(null);
 
 const parseError = (error) => error?.response?.data?.message || error?.message || 'Something went wrong';
 
@@ -24,7 +24,7 @@ export const DataProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
 
-  const refreshDirectory = async () => {
+  const refreshDirectory = useCallback(async () => {
     if (!isAuthenticated) {
       setUsers([]);
       setTeams([]);
@@ -52,11 +52,23 @@ export const DataProvider = ({ children }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [isAuthenticated, toast, user?.isAdmin, user?.isManager]);
 
   useEffect(() => {
     refreshDirectory();
-  }, [isAuthenticated]);
+  }, [isAuthenticated, user?.isAdmin, user?.isManager]);
+
+  useEffect(() => {
+    const handleSync = () => {
+      refreshDirectory();
+    };
+
+    window.addEventListener('rbac:sync', handleSync);
+
+    return () => {
+      window.removeEventListener('rbac:sync', handleSync);
+    };
+  }, [refreshDirectory]);
 
   const refreshAfterMutation = async (message, mutation) => {
     try {
@@ -88,18 +100,30 @@ export const DataProvider = ({ children }) => {
         try {
           const res = await assignRoleRequest(payload);
           toast.success('Role assigned');
-          await refreshDirectory();
-          // If the role change affected the currently logged-in user, refresh their profile
-          if (res?.data?.userId?._id && user?.id && res.data.userId._id === user.id && refreshUser) {
+          if (payload?.userId && user?.id && String(payload.userId) === String(user.id) && refreshUser) {
             await refreshUser();
           }
+          await refreshDirectory();
           return res.data;
         } catch (error) {
           toast.error(parseError(error));
           throw error;
         }
       },
-      updateRole: (payload) => refreshAfterMutation('Role updated', () => updateRoleRequest(payload)),
+      updateRole: async (payload) => {
+        try {
+          const res = await updateRoleRequest(payload);
+          toast.success('Role updated');
+          if (payload?.userId && user?.id && String(payload.userId) === String(user.id) && refreshUser) {
+            await refreshUser();
+          }
+          await refreshDirectory();
+          return res.data;
+        } catch (error) {
+          toast.error(parseError(error));
+          throw error;
+        }
+      },
       createTask: (payload) => refreshAfterMutation('Task created', () => createTaskRequest(payload)),
       updateTask: (id, payload) => refreshAfterMutation('Task updated', () => updateTaskRequest(id, payload)),
       completeTask: (id) => refreshAfterMutation('Task completed', () => completeTaskRequest(id)),
@@ -112,10 +136,3 @@ export const DataProvider = ({ children }) => {
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;
 };
 
-export const useData = () => {
-  const context = useContext(DataContext);
-  if (!context) {
-    throw new Error('useData must be used inside DataProvider');
-  }
-  return context;
-};

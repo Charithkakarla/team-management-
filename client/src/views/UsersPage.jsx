@@ -4,7 +4,7 @@
 import { useMemo, useState } from 'react';
 import { Plus } from 'lucide-react';
 import { Card, Button, Input, Modal, Table, EmptyState } from '../ui/core';
-import { useData } from '../state/DataContext';
+import { useData } from '../hooks/useData';
 import { useToast } from '../hooks/useToast';
 
 export const UsersPage = () => {

@@ -1,13 +1,19 @@
 // Auth state: stores the logged-in user and JWT in local storage.
 // It handles login, register, and logout state.
 // Use this file to understand session persistence on the client.
-import { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { login as loginRequest, register as registerRequest, getCurrent as getCurrentRequest } from '../api/authService';
+import { api } from '../api/api';
 
 const AuthContext = createContext(null);
 
 const storageUserKey = 'rbac_user';
 const storageTokenKey = 'rbac_token';
+const buildRealtimeStreamUrl = (token) => {
+  const baseUrl = api.defaults.baseURL || 'http://localhost:5000/api';
+  const normalizedBaseUrl = baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`;
+  return new URL(`realtime/stream?token=${encodeURIComponent(token)}`, normalizedBaseUrl).toString();
+};
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(() => {
@@ -45,14 +51,76 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const refreshUser = async () => {
+  const refreshUser = useCallback(async () => {
     try {
       const res = await getCurrentRequest();
       if (res?.data?.user) setUser(res.data.user);
     } catch (err) {
       // ignore and keep current user
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    if (!token) {
+      return;
+    }
+
+    let active = true;
+
+    const syncUser = async () => {
+      if (!active) {
+        return;
+      }
+
+      await refreshUser();
+    };
+
+    syncUser();
+
+    const handleFocus = () => {
+      syncUser();
+    };
+
+    const intervalId = window.setInterval(syncUser, 15000);
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      active = false;
+      window.clearInterval(intervalId);
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [token, refreshUser]);
+
+  useEffect(() => {
+    if (!token) {
+      return undefined;
+    }
+
+    const streamUrl = buildRealtimeStreamUrl(token);
+    const eventSource = new EventSource(streamUrl);
+
+    const syncFromRoleChange = async () => {
+      await refreshUser();
+      window.dispatchEvent(new CustomEvent('rbac:sync'));
+    };
+
+    const handleRoleChange = () => {
+      syncFromRoleChange();
+    };
+
+    const handleError = () => {
+      // Let the browser retry automatically; this keeps the setup robust without noisy errors.
+    };
+
+    eventSource.addEventListener('role-change', handleRoleChange);
+    eventSource.addEventListener('error', handleError);
+
+    return () => {
+      eventSource.removeEventListener('role-change', handleRoleChange);
+      eventSource.removeEventListener('error', handleError);
+      eventSource.close();
+    };
+  }, [token, refreshUser]);
 
   const value = useMemo(
     () => ({

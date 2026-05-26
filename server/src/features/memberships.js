@@ -6,7 +6,8 @@ import { Router } from "express";
 import { Membership } from "../dataModels/Membership.js";
 import { AppError } from "../shared/AppError.js";
 import { asyncHandler } from "../shared/asyncHandler.js";
-import { requireAdmin, requirePrivileged } from "../middleware/access.js";
+import { requirePrivileged, requireSuperAdmin } from "../middleware/access.js";
+import { emitRoleChange } from "../shared/realtime.js";
 
 export const addMembership = async ({ userId, teamId, roleId = null }) => {
   if (!userId || !teamId) {
@@ -34,7 +35,16 @@ export const assignRoleToMembership = async ({ userId, teamId, roleId }) => {
     throw new AppError("userId, teamId and roleId are required", 400);
   }
 
-  return Membership.findOneAndUpdate({ userId, teamId }, { roleId }, { new: true, runValidators: true, upsert: true }).populate("userId teamId roleId");
+  const membership = await Membership.findOneAndUpdate({ userId, teamId }, { roleId }, { new: true, runValidators: true, upsert: true }).populate("userId teamId roleId");
+  emitRoleChange({
+    userId,
+    teamId,
+    roleId,
+    roleName: membership.roleId?.name,
+    permissions: membership.roleId?.permissions || []
+  });
+
+  return membership;
 };
 
 export const updateMembershipRole = assignRoleToMembership;
@@ -74,8 +84,8 @@ const getTeamMembersController = asyncHandler(async (req, res) => {
 
 export const membershipsRouter = Router();
 
-membershipsRouter.post("/add-user", requireAdmin, addUserToTeamController);
+membershipsRouter.post("/add-user", requireSuperAdmin, addUserToTeamController);
 membershipsRouter.post("/remove-user", requirePrivileged, removeUserFromTeamController);
-membershipsRouter.post("/assign-role", requirePrivileged, assignRoleController);
-membershipsRouter.put("/update-role", requirePrivileged, updateRoleController);
+membershipsRouter.post("/assign-role", requireSuperAdmin, assignRoleController);
+membershipsRouter.put("/update-role", requireSuperAdmin, updateRoleController);
 membershipsRouter.get("/team/:teamId", requirePrivileged, getTeamMembersController);

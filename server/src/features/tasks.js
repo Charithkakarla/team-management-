@@ -6,12 +6,31 @@ import { Router } from "express";
 import { Task } from "../dataModels/Task.js";
 import { AppError } from "../shared/AppError.js";
 import { asyncHandler } from "../shared/asyncHandler.js";
-import { isAdminEmail } from "../shared/access.js";
+import { getCurrentUserMemberships, isAdminEmail, isSuperAdminEmail } from "../shared/access.js";
 
 const normalizeTask = (task) => task.populate("teamId assigneeId createdById");
 
-export const listTasks = async ({ userEmail, userId }) => {
-  const filter = isAdminEmail(userEmail) ? {} : { $or: [{ assigneeId: userId }, { createdById: userId }] };
+export const listTasks = async ({ userEmail, userId, isAdmin = false }) => {
+  const superAdmin = isAdmin || isAdminEmail(userEmail) || isSuperAdminEmail(userEmail);
+
+  if (superAdmin) {
+    return Task.find({}).sort({ createdAt: -1 }).populate("teamId assigneeId createdById");
+  }
+
+  const memberships = await getCurrentUserMemberships(userId);
+  const managedTeamIds = memberships
+    .filter((membership) => {
+      const roleName = membership.roleId?.name?.toLowerCase();
+      const permissions = membership.roleId?.permissions || [];
+      return roleName === 'manager' || permissions.includes('MANAGE_USERS');
+    })
+    .map((membership) => membership.teamId?._id || membership.teamId)
+    .filter(Boolean);
+
+  const filter = managedTeamIds.length
+    ? { $or: [{ assigneeId: userId }, { createdById: userId }, { teamId: { $in: managedTeamIds } }] }
+    : { $or: [{ assigneeId: userId }, { createdById: userId }] };
+
   return Task.find(filter).sort({ createdAt: -1 }).populate("teamId assigneeId createdById");
 };
 
@@ -47,7 +66,7 @@ export const deleteTask = async (taskId) => {
 };
 
 const getTasksController = asyncHandler(async (req, res) => {
-  const tasks = await listTasks({ userEmail: req.authUser.email, userId: req.authUser.sub });
+  const tasks = await listTasks({ userEmail: req.authUser.email, userId: req.authUser.sub, isAdmin: req.authUser.isAdmin });
   res.json(tasks);
 });
 
