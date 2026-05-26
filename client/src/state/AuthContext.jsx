@@ -3,14 +3,14 @@
 // Use this file to understand session persistence on the client.
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { login as loginRequest, register as registerRequest, getCurrent as getCurrentRequest } from '../api/authService';
-import { api } from '../api/api';
+import { API_BASE_URL } from '../api/api';
 
 const AuthContext = createContext(null);
 
 const storageUserKey = 'rbac_user';
 const storageTokenKey = 'rbac_token';
 const buildRealtimeStreamUrl = (token) => {
-  const baseUrl = api.defaults.baseURL || 'http://localhost:5000/api';
+  const baseUrl = API_BASE_URL;
   const normalizedBaseUrl = baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`;
   return new URL(`realtime/stream?token=${encodeURIComponent(token)}`, normalizedBaseUrl).toString();
 };
