@@ -2,7 +2,7 @@
 // It checks whether the current user is allowed to continue.
 // Use this file to understand role-based route protection.
 import { AppError } from '../shared/AppError.js';
-import { hasManagerAccess, isCEOEmail, isManagerEmail, isSuperAdminEmail } from '../shared/access.js';
+import { hasAdminAccess, hasManagerAccess, isCEOEmail, isManagerEmail, isSuperAdminEmail } from '../shared/access.js';
 
 export const requireSuperAdmin = (req, res, next) => {
   if (isSuperAdminEmail(req.authUser?.email)) {
@@ -23,9 +23,9 @@ export const requirePrivileged = (req, res, next) => {
     return next();
   }
 
-  hasManagerAccess(req.authUser?.sub)
+  Promise.all([hasAdminAccess(req.authUser?.sub), hasManagerAccess(req.authUser?.sub)])
     .then((allowed) => {
-      if (allowed) {
+      if (allowed.some(Boolean)) {
         return next();
       }
 

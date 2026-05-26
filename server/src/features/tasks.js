@@ -21,8 +21,7 @@ export const listTasks = async ({ userEmail, userId, isAdmin = false }) => {
   const managedTeamIds = memberships
     .filter((membership) => {
       const roleName = membership.roleId?.name?.toLowerCase();
-      const permissions = membership.roleId?.permissions || [];
-      return roleName === 'manager' || permissions.includes('MANAGE_USERS');
+      return roleName === 'manager' || roleName === 'admin';
     })
     .map((membership) => membership.teamId?._id || membership.teamId)
     .filter(Boolean);

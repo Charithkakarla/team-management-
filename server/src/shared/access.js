@@ -21,6 +21,12 @@ export const isPrivilegedEmail = (email) => isCEOEmail(email) || isManagerEmail(
 
 export const isAdminEmail = isSuperAdminEmail;
 
+export const hasAdminAccess = async (userId) => {
+	const memberships = await getCurrentUserMemberships(userId);
+
+	return memberships.some((membership) => membership.roleId?.name?.toLowerCase() === 'admin');
+};
+
 export const getCurrentUserMemberships = async (userId) => {
 	if (!userId) {
 		return [];
@@ -32,9 +38,5 @@ export const getCurrentUserMemberships = async (userId) => {
 export const hasManagerAccess = async (userId) => {
 	const memberships = await getCurrentUserMemberships(userId);
 
-	return memberships.some((membership) => {
-		const roleName = membership.roleId?.name?.toLowerCase();
-		const permissions = membership.roleId?.permissions || [];
-		return roleName === 'manager' || permissions.includes('MANAGE_USERS');
-	});
+	return memberships.some((membership) => membership.roleId?.name?.toLowerCase() === 'manager');
 };

@@ -83,12 +83,15 @@ export const getCurrentUserFromDb = async (userId) => {
   if (!user) throw new AppError('User not found', 404);
 
   const memberships = await Membership.find({ userId }).populate('roleId');
+  let dynamicIsAdmin = false;
   let dynamicIsManager = false;
   for (const m of memberships) {
     if (m.roleId) {
-      if ((m.roleId.name && m.roleId.name.toLowerCase() === 'manager') || (m.roleId.permissions || []).includes('MANAGE_USERS')) {
+      if (m.roleId.name && m.roleId.name.toLowerCase() === 'admin') {
+        dynamicIsAdmin = true;
+      }
+      if (m.roleId.name && m.roleId.name.toLowerCase() === 'manager') {
         dynamicIsManager = true;
-        break;
       }
     }
   }
@@ -98,7 +101,7 @@ export const getCurrentUserFromDb = async (userId) => {
     name: user.name,
     email: user.email,
     isSuperAdmin: isCEOEmail(user.email),
-    isAdmin: isCEOEmail(user.email),
+    isAdmin: isCEOEmail(user.email) || dynamicIsAdmin,
     isManager: dynamicIsManager || isManagerEmail(user.email),
     createdAt: user.createdAt,
     updatedAt: user.updatedAt
@@ -112,7 +115,8 @@ const registerController = asyncHandler(async (req, res) => {
 
 const loginController = asyncHandler(async (req, res) => {
   const result = await loginUser(req.body);
-  res.json({ user: sanitizeUser(result.user), token: result.token });
+  const current = await getCurrentUserFromDb(result.user._id);
+  res.json({ user: current, token: result.token });
 });
 
 export const authRouter = Router();
