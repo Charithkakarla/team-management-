@@ -6,7 +6,7 @@ import { Router } from "express";
 import { User } from "../dataModels/User.js";
 import { AppError } from "../shared/AppError.js";
 import { asyncHandler } from "../shared/asyncHandler.js";
-import { requirePrivileged, requireSuperAdmin } from "../middleware/access.js";
+import { requirePrivileged, requireAdmin } from "../middleware/access.js";
 
 export const createUser = async ({ name, email, passwordHash = null }) => {
   if (!name || !email) {
@@ -35,5 +35,5 @@ const getUsersController = asyncHandler(async (req, res) => {
 
 export const usersRouter = Router();
 
-usersRouter.post("/", requireSuperAdmin, createUserController);
+usersRouter.post("/", requireAdmin, createUserController);
 usersRouter.get("/", requirePrivileged, getUsersController);

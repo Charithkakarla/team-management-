@@ -6,7 +6,7 @@ import { Router } from "express";
 import { Membership } from "../dataModels/Membership.js";
 import { AppError } from "../shared/AppError.js";
 import { asyncHandler } from "../shared/asyncHandler.js";
-import { requirePrivileged, requireSuperAdmin } from "../middleware/access.js";
+import { requirePrivileged, requireAdmin } from "../middleware/access.js";
 import { emitRoleChange } from "../shared/realtime.js";
 
 export const addMembership = async ({ userId, teamId, roleId = null }) => {
@@ -84,8 +84,8 @@ const getTeamMembersController = asyncHandler(async (req, res) => {
 
 export const membershipsRouter = Router();
 
-membershipsRouter.post("/add-user", requireSuperAdmin, addUserToTeamController);
+membershipsRouter.post("/add-user", requireAdmin, addUserToTeamController);
 membershipsRouter.post("/remove-user", requirePrivileged, removeUserFromTeamController);
-membershipsRouter.post("/assign-role", requireSuperAdmin, assignRoleController);
-membershipsRouter.put("/update-role", requireSuperAdmin, updateRoleController);
+membershipsRouter.post("/assign-role", requireAdmin, assignRoleController);
+membershipsRouter.put("/update-role", requireAdmin, updateRoleController);
 membershipsRouter.get("/team/:teamId", requirePrivileged, getTeamMembersController);

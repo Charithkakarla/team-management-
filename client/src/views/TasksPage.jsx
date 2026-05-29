@@ -33,6 +33,7 @@ export const TasksPage = () => {
     });
     setOpen(true);
   };
+  
 
   const submit = async (event) => {
     event.preventDefault();
@@ -67,69 +68,92 @@ export const TasksPage = () => {
         </Button>
       </div>
 
-      <Card className="p-0">
-        <Table
-          loading={loading}
-          columns={[
-            { key: 'title', label: 'Task' },
-            { key: 'team', label: 'Team' },
-            { key: 'assignee', label: 'Assignee' },
-            { key: 'status', label: 'Status' },
-            { key: 'actions', label: 'Actions' }
-          ]}
-          data={sortedTasks}
-          emptyState={<EmptyState title="No tasks yet" description="Create a task to track work for the CEO or employees." actionLabel="New Task" onAction={openCreate} />}
-          renderRow={(task) => (
-            <tr key={task._id} className="transition hover:bg-blue-50 dark:hover:bg-white/5">
-              <td className="px-4 py-4">
-                <div className="text-sm font-medium text-text-primary">{task.title}</div>
-                <div className="mt-1 text-sm text-text-muted">{task.description || 'No description'}</div>
-              </td>
-              <td className="px-4 py-4 text-sm text-text-muted">{task.teamId?.name || 'No team'}</td>
-              <td className="px-4 py-4 text-sm text-text-muted">{task.assigneeId?.name || 'Unassigned'}</td>
-              <td className="px-4 py-4 text-sm">
-                <Badge tone={task.status === 'done' ? 'success' : 'primary'}>{task.status}</Badge>
-              </td>
-              <td className="px-4 py-4">
-                <div className="flex flex-wrap items-center gap-2">
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    className="h-9 w-9 p-0"
-                    title={task.status === 'done' ? 'Undo task' : 'Mark task complete'}
-                    aria-label={task.status === 'done' ? 'Undo task' : 'Mark task complete'}
-                    onClick={() => (task.status === 'done' ? undoTask(task._id) : completeTask(task._id))}
-                  >
-                    {task.status === 'done' ? <RotateCcw className="h-4 w-4" /> : <CheckCircle2 className="h-4 w-4" />}
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    className="h-9 w-9 p-0"
-                    title="Edit task"
-                    aria-label="Edit task"
-                    onClick={() => openEdit(task)}
-                  >
-                    <Pencil className="h-4 w-4" />
-                  </Button>
-                  {(user?.isAdmin || task.createdById?._id === user?.id) ? (
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      className="h-9 w-9 p-0"
-                      title="Delete task"
-                      aria-label="Delete task"
-                      onClick={() => deleteTask(task._id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  ) : null}
+      <div>
+        {loading ? (
+          <Card className="p-4">
+            <div className="text-sm text-text-muted">Loading tasks...</div>
+          </Card>
+        ) : sortedTasks.length === 0 ? (
+          <Card className="p-6">
+            <EmptyState title="No tasks yet" description="Create a task to track work for admins or employees." actionLabel="New Task" onAction={openCreate} />
+          </Card>
+        ) : (
+          // Group tasks by team name
+          Object.entries(
+            sortedTasks.reduce((acc, task) => {
+              const teamName = task.teamId?.name || 'No team';
+              if (!acc[teamName]) acc[teamName] = [];
+              acc[teamName].push(task);
+              return acc;
+            }, {})
+          )
+            // sort groups alphabetically but keep 'No team' last
+            .sort((a, b) => {
+              if (a[0] === 'No team') return 1;
+              if (b[0] === 'No team') return -1;
+              return a[0].localeCompare(b[0]);
+            })
+            .map(([teamName, teamTasks]) => (
+              <Card key={teamName} className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-[13px] uppercase tracking-[0.24em] text-text-muted">{teamName}</div>
+                    <h3 className="mt-1 text-lg font-semibold text-text-primary">{teamTasks.length} task{teamTasks.length !== 1 ? 's' : ''}</h3>
+                  </div>
                 </div>
-              </td>
-            </tr>
-          )}
-        />
-      </Card>
+
+                <div className="mt-4 grid gap-3">
+                  {teamTasks.map((task) => (
+                    <div key={task._id} className="flex items-start justify-between gap-4 rounded-2xl border border-border bg-gray-50 p-4 dark:bg-white/5">
+                      <div>
+                        <div className="text-sm font-semibold text-text-primary">{task.title}</div>
+                        <div className="mt-1 text-sm text-text-muted">{task.description || 'No description'}</div>
+                        <div className="mt-2 text-xs text-text-muted">Assignee: {task.assigneeId?.name || 'Unassigned'}</div>
+                      </div>
+                      <div className="flex flex-col items-end gap-2">
+                        <Badge tone={task.status === 'done' ? 'success' : 'primary'}>{task.status}</Badge>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            className="h-9 w-9 p-0"
+                            title={task.status === 'done' ? 'Undo task' : 'Mark task complete'}
+                            aria-label={task.status === 'done' ? 'Undo task' : 'Mark task complete'}
+                            onClick={() => (task.status === 'done' ? undoTask(task._id) : completeTask(task._id))}
+                          >
+                            {task.status === 'done' ? <RotateCcw className="h-4 w-4" /> : <CheckCircle2 className="h-4 w-4" />}
+                          </Button>
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            className="h-9 w-9 p-0"
+                            title="Edit task"
+                            aria-label="Edit task"
+                            onClick={() => openEdit(task)}
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          {(user?.isAdmin || task.createdById?._id === user?.id) ? (
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              className="h-9 w-9 p-0"
+                              title="Delete task"
+                              aria-label="Delete task"
+                              onClick={() => deleteTask(task._id)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          ) : null}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            ))
+        )}
+      </div>
 
       <Modal
         open={open}

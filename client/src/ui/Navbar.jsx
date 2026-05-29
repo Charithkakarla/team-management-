@@ -23,7 +23,7 @@ export const Navbar = ({ onMenuClick, collapsed, onToggleSidebar }) => {
           </Button>
           <div>
             <div className="text-[13px] uppercase tracking-[0.24em] text-text-muted">RBAC dashboard</div>
-            <h1 className="text-sm font-semibold text-text-primary">{user?.isAdmin ? 'CEO Workspace' : user?.isManager ? 'Manager Workspace' : 'Employee Workspace'}</h1>
+            <h1 className="text-sm font-semibold text-text-primary">{user?.isAdmin ? 'Admin Workspace' : user?.isManager ? 'Manager Workspace' : 'Employee Workspace'}</h1>
           </div>
         </div>
 
@@ -32,7 +32,7 @@ export const Navbar = ({ onMenuClick, collapsed, onToggleSidebar }) => {
             {isDark ? <SunMedium className="h-4 w-4" /> : <MoonStar className="h-4 w-4" />}
           </Button>
           <div className="hidden rounded-2xl border border-border bg-surface px-4 py-2 text-sm text-text-muted md:block">
-            {user?.name || 'User'}{user?.isAdmin ? ' · CEO' : user?.isManager ? ' · Manager' : ''}
+            {user?.name || 'User'}{user?.isAdmin ? ' · Admin' : user?.isManager ? ' · Manager' : ''}
           </div>
           <Button variant="secondary" size="sm" onClick={logout}>
             <LogOut className="h-4 w-4" />

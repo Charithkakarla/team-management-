@@ -17,7 +17,10 @@ export const RolesPage = () => {
   const [form, setForm] = useState(defaultForm);
 
   const filteredRoles = useMemo(
-    () => roles.filter((role) => `${role.name} ${role.permissions.join(' ')}`.toLowerCase().includes(search.toLowerCase())),
+    () =>
+      roles
+        .filter((role) => role.name && role.name.toLowerCase() !== 'superadmin')
+        .filter((role) => `${role.name} ${role.permissions.join(' ')}`.toLowerCase().includes(search.toLowerCase())),
     [roles, search]
   );
 
@@ -89,16 +92,20 @@ export const RolesPage = () => {
                 </div>
               </td>
               <td className="px-4 py-4">
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  className="h-9 w-9 p-0"
-                  title="Edit role"
-                  aria-label="Edit role"
-                  onClick={() => openEdit(role)}
-                >
-                  <Pencil className="h-4 w-4" />
-                </Button>
+                {role.name && role.name.toLowerCase() === 'superadmin' ? (
+                  <div className="text-sm text-text-muted">(deprecated)</div>
+                ) : (
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    className="h-9 w-9 p-0"
+                    title="Edit role"
+                    aria-label="Edit role"
+                    onClick={() => openEdit(role)}
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                )}
               </td>
             </tr>
           )}

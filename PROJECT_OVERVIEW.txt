@@ -1,0 +1,151 @@
+PROJECT: Team Management (RBAC)
+
+INTRODUCTION
+
+This repository is a role-based access control (RBAC) team and task management system.
+The architecture is a two-tier app:
+- server/: Express.js API (Node, Mongoose) — responsible for authentication, RBAC logic, SSE realtime notifications, and persistence.
+- client/: Vite + React SPA — user interface, consumes API, manages session state and real-time sync via SSE.
+
+High-level goals
+- Let admins/managers manage teams, roles, and memberships.
+- Allow users to be members of multiple teams with per-team roles.
+- Keep client UI in-sync when role/membership changes (SSE).
+
+AUTHENTICATION & AUTH FLOW (end-to-end)
+
+1) Registration / Login
+- Client calls `POST /api/auth/register` or `POST /api/auth/login` (see: server/src/features/auth.js).
+- Server validates, creates user or checks password hash (bcryptjs), and issues a JWT via `jwt.sign`.
+- Token payload contains `sub` (user id), `email`, and boolean flags `isAdmin` and `isManager` (derived from email rules) for quick UI gating.
+
+2) Token storage & usage
+- Client stores token in `localStorage` under `rbac_token` (client/src/state/AuthContext.jsx and client/src/api/api.js).
+- Axios `api` instance attaches `Authorization: Bearer <token>` header to requests.
+
+3) Protected routes
+- Server middleware `requireAuth` (server/src/middleware/auth.js) extracts token from `Authorization` header or `?token=` query (used for SSE), verifies with `jwt.verify`, sets `req.authUser`, or throws 401.
+- Higher-level guards `requireAdmin` and `requirePrivileged` (server/src/middleware/access.js) use email-based privileged rules + membership-based checks to authorize functionality.
+
+4) Expanded user info
+- Client calls `GET /api/auth/me` to obtain membership-aware `user` information. Server computes dynamic `isAdmin`/`isManager` by querying `Membership` and populating `roleId`.
+
+REALTIME (SSE) OVERVIEW
+
+- Server exposes `/api/realtime/stream` (server/src/features/realtime.js) — an SSE endpoint that registers a response as a subscriber for a user id.
+- `server/src/shared/realtime.js` manages an in-memory map of subscribers and provides `emitRoleChange(...)` to notify connected clients.
+- Client `AuthContext` (client/src/state/AuthContext.jsx) connects via `new EventSource(streamUrl)` and listens for `role-change` events; on receipt it re-fetches `/api/auth/me` to refresh local user state.
+
+DATABASE & MODELS
+
+- Mongoose models in `server/src/dataModels`:
+  - `User.js` — users with `name`, `email`, `passwordHash`, timestamps.
+  - `Team.js` — team metadata.
+  - `Role.js` — role name and permission strings.
+  - `Membership.js` — links `userId`, `teamId`, and `roleId`. Index: `{ userId: 1, teamId: 1 }` unique.
+  - `Task.js` — tasks linked to team, assignee, creator, status, due date.
+
+FEATURE MODULES (server/src/features)
+
+- `auth.js` — register, login, token creation (`createToken`), and `getCurrentUserFromDb` which computes membership-aware flags.
+- `users.js` — user CRUD endpoints (protected)
+- `teams.js` — team CRUD
+- `roles.js` — role CRUD and permission editing (server already blocks or hides any legacy "SuperAdmin" role)
+- `memberships.js` — add/remove/assign roles for users in teams; emits `emitRoleChange` after role changes
+- `tasks.js` — task CRUD and list filtering according to user memberships and role
+- `permissions.js` — permission resolution helpers
+- `realtime.js` — SSE stream controller
+
+MIDDLEWARE (server/src/middleware)
+
+- `auth.js` — extracts & verifies JWT, attaches `req.authUser`.
+- `access.js` — `requireAdmin`, `requirePrivileged` guards combining email rules and membership checks.
+- `errorHandler.js` — central error formatting and fallback handlers.
+
+CLIENT (client/src)
+
+- `api/api.js` — Axios instance with base URL and request interceptor that attaches token.
+- `api/authService.js` — login/register/getCurrent wrappers.
+- `state/AuthContext.jsx` — stores `user` and `token`, persists in `localStorage`, handles SSE subscription and automatic refresh.
+- `views/*` — React page components: `DashboardPage`, `TasksPage`, `RolesPage`, `TeamsPage`, `UsersPage`, `PermissionsPage`, `LoginPage`.
+- `ui/` — shared UI components.
+
+MAINTENANCE SCRIPTS (server/src/maintenanceScripts)
+
+- `seed.js` — seeds demo data (roles, users, teams, memberships, tasks). Respects `.env` vars for default credentials. Use only for local/dev.
+- `removeSuperAdmin.js` — safe maintenance script (dry-run by default) to backup/rename/delete legacy `SuperAdmin` roles; includes `--dry-run`, `--yes`, `--backup`, and `--rename-to` options.
+
+ENV & CONFIG
+
+Key environment variables (see server/.env usage):
+- `MONGODB_URI` — MongoDB connection string (required)
+- `JWT_SECRET` — JWT signing secret (defaults to `dev-secret` in dev only)
+- `ADMIN_EMAIL` / `MANAGER_EMAIL` — optional privileged emails
+- `CLIENT_URL` / `CORS_ORIGINS` — used by `server/src/app.js` for CORS
+
+DEVELOPMENT & RUNNING
+
+1) Install dependencies
+- Root uses workspaces; or individually run in client & server:
+  - `cd server && npm install`
+  - `cd client && npm install`
+
+2) Seed local DB (optional)
+- `cd server && node src/maintenanceScripts/seed.js`
+
+3) Run server
+- `cd server && npm run dev` (nodemon)
+
+4) Run client
+- `cd client && npm run dev` (vite)
+
+5) Quick test: login and hit `/api/auth/me` using the returned token.
+
+SECURITY NOTES & RECOMMENDATIONS
+
+- Password hashing: project uses `bcryptjs` (pure JS). For production prefer native `bcrypt` for performance.
+- Token storage: storing JWT in `localStorage` exposes it to XSS. For stronger security use HTTP-only secure cookies and short-lived access tokens + refresh tokens.
+- SSE auth: current SSE connects with `?token=` because `EventSource` cannot set headers. This leaks tokens to logs and referers. Recommended fixes:
+  - Use HTTP-only cookies for SSE authentication, or
+  - Issue short-lived one-time stream tokens stored server-side and passed as query param, revoking them after use.
+- Token revocation: JWTs are stateless. If you need immediate logout/invalidation add a blacklist (Redis) or token versioning on user records.
+
+PERFORMANCE NOTES
+
+- Membership lookups in `getCurrentUserFromDb` use `Membership.find(...).populate('roleId')`. If memberships grow large, optimize by using `exists()` queries or aggregations to compute boolean flags rather than full populate.
+- Bcrypt compare may be CPU heavy under load; native `bcrypt` or worker/offload is recommended for production.
+
+CODEBAS E NAVIGATION (quick file map)
+
+- server/
+  - src/app.js — Express setup and CORS
+  - src/server.js — entrypoint (loads .env, connects DB)
+  - src/routes.js — mounts feature routers
+  - src/features/*.js — feature routers & controllers (auth, users, teams, roles, memberships, tasks, realtime, etc.)
+  - src/middleware/*.js — `auth.js`, `access.js`, `errorHandler.js`
+  - src/dataModels/*.js — Mongoose models (User, Team, Role, Membership, Task)
+  - src/shared/*.js — helpers: `access.js`, `realtime.js`, `AppError.js`, `asyncHandler.js`
+  - src/maintenanceScripts/* — seeds & maintenance
+
+- client/
+  - src/main.jsx — app entry
+  - src/api/api.js — axios instance
+  - src/state/AuthContext.jsx — auth state, SSE
+  - src/hooks/ — small custom hooks
+  - src/views/ — application pages
+  - src/ui/ — UI components
+
+TROUBLESHOOTING CHECKLIST
+
+- If login is slow: check server logs for timing (server/src/features/auth.js includes timing log points), check bcrypt CPU usage, and check DB latency.
+- If SSE not connecting: verify `API_BASE_URL` and that `/realtime/stream` is reachable; check browser console for EventSource errors.
+- If permissions appear incorrect: call `/api/auth/me` and inspect `user` object and `memberships` returned by the server.
+
+DOCUMENTATION & NEXT STEPS
+
+- I can add a Mermaid diagram that visualizes auth flow.
+- I can add `CONTRIBUTING.md` with dev commands and a checklist.
+- I can migrate SSE auth to cookie-based auth or implement token revocation.
+
+---
+Generated: 2026-05-28

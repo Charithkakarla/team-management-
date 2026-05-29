@@ -21,7 +21,7 @@ import { getAdminEmail, getManagerEmail } from '../shared/access.js';
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/team-management';
 const ADMIN_EMAIL = getAdminEmail();
 const MANAGER_EMAIL = getManagerEmail();
-const ADMIN_NAME = process.env.ADMIN_NAME || 'CEO Admin';
+const ADMIN_NAME = process.env.ADMIN_NAME || 'Admin User';
 const MANAGER_NAME = process.env.MANAGER_NAME || 'Operations Manager';
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || process.env.SEED_ADMIN_PASSWORD || 'password123';
 const MANAGER_PASSWORD = process.env.MANAGER_PASSWORD || 'Charith@2455';
@@ -41,7 +41,6 @@ const seed = async () => {
     ]);
 
     // Create roles
-    const superAdminRole = await Role.create({ name: 'SuperAdmin', permissions: ['CREATE_TASK', 'EDIT_TASK', 'DELETE_TASK', 'VIEW_ONLY', 'MANAGE_USERS'] });
     const adminRole = await Role.create({ name: 'Admin', permissions: ['CREATE_TASK', 'EDIT_TASK', 'DELETE_TASK', 'VIEW_ONLY', 'MANAGE_USERS'] });
     const managerRole = await Role.create({ name: 'Manager', permissions: ['CREATE_TASK', 'EDIT_TASK', 'DELETE_TASK', 'VIEW_ONLY'] });
     const viewerRole = await Role.create({ name: 'Viewer', permissions: ['VIEW_ONLY'] });
@@ -66,8 +65,8 @@ const seed = async () => {
     const qaTeam = await Team.create({ name: 'Quality Assurance', description: 'Static team for access checks' });
 
     // Assign memberships and roles
-    await Membership.create({ userId: adminUser._id, teamId: executiveTeam._id, roleId: superAdminRole._id });
-    await Membership.create({ userId: adminUser._id, teamId: productTeam._id, roleId: superAdminRole._id });
+    await Membership.create({ userId: adminUser._id, teamId: executiveTeam._id, roleId: adminRole._id });
+    await Membership.create({ userId: adminUser._id, teamId: productTeam._id, roleId: adminRole._id });
     await Membership.create({ userId: managerUser._id, teamId: productTeam._id, roleId: managerRole._id });
     await Membership.create({ userId: managerUser._id, teamId: operationsTeam._id, roleId: managerRole._id });
     await Membership.create({ userId: employeeOne._id, teamId: productTeam._id, roleId: viewerRole._id });

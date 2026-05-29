@@ -6,12 +6,12 @@ import { Router } from "express";
 import { Task } from "../dataModels/Task.js";
 import { AppError } from "../shared/AppError.js";
 import { asyncHandler } from "../shared/asyncHandler.js";
-import { getCurrentUserMemberships, isAdminEmail, isSuperAdminEmail } from "../shared/access.js";
+import { getCurrentUserMemberships, isAdminEmail } from "../shared/access.js";
 
 const normalizeTask = (task) => task.populate("teamId assigneeId createdById");
 
 export const listTasks = async ({ userEmail, userId, isAdmin = false }) => {
-  const superAdmin = isAdmin || isAdminEmail(userEmail) || isSuperAdminEmail(userEmail);
+  const superAdmin = isAdmin || isAdminEmail(userEmail);
 
   if (superAdmin) {
     return Task.find({}).sort({ createdAt: -1 }).populate("teamId assigneeId createdById");

@@ -1,5 +1,4 @@
 // Permissions feature: resolves team-scoped permissions for a given user.
-// Permissions feature: resolves team-scoped permissions for a given user.
 // It checks the user's membership and returns allowed actions.
 // Use this file to understand permission lookup.
 import { Router } from "express";

@@ -6,17 +6,23 @@ import { Router } from "express";
 import { Role } from "../dataModels/Role.js";
 import { AppError } from "../shared/AppError.js";
 import { asyncHandler } from "../shared/asyncHandler.js";
-import { requirePrivileged, requireSuperAdmin } from "../middleware/access.js";
+import { requirePrivileged, requireAdmin } from "../middleware/access.js";
 
 export const createRole = async ({ name, permissions = [] }) => {
   if (!name) {
     throw new AppError("Role name is required", 400);
   }
 
+  if (name && name.toLowerCase() === 'superadmin') {
+    throw new AppError('The SuperAdmin role is deprecated and cannot be created', 400);
+  }
+
   return Role.create({ name, permissions });
 };
 
-export const listRoles = async () => Role.find().sort({ createdAt: -1 });
+export const listRoles = async () =>
+  // Exclude any legacy SuperAdmin role from lists (case-insensitive)
+  Role.find({ name: { $not: { $regex: '^superadmin$', $options: 'i' } } }).sort({ createdAt: -1 });
 
 export const updateRolePermissions = async (roleId, permissions = []) => {
   const role = await Role.findByIdAndUpdate(roleId, { permissions }, { new: true, runValidators: true });
@@ -45,6 +51,6 @@ const updateRolePermissionsController = asyncHandler(async (req, res) => {
 
 export const rolesRouter = Router();
 
-rolesRouter.post("/", requireSuperAdmin, createRoleController);
+rolesRouter.post("/", requireAdmin, createRoleController);
 rolesRouter.get("/", requirePrivileged, getRolesController);
-rolesRouter.put("/:id/permissions", requireSuperAdmin, updateRolePermissionsController);
+rolesRouter.put("/:id/permissions", requireAdmin, updateRolePermissionsController);

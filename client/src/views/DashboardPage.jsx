@@ -15,7 +15,7 @@ const recentColumns = [
 export const DashboardPage = () => {
   const { users, teams, roles, tasks, loading } = useData();
   const { user } = useAuth();
-  const isCEO = Boolean(user?.isAdmin);
+  const isAdmin = Boolean(user?.isAdmin);
 
   const stats = [
     { label: 'Users', value: users.length, helper: 'Registered accounts', icon: <Users className="h-5 w-5" /> },
@@ -23,7 +23,7 @@ export const DashboardPage = () => {
     { label: 'Tasks', value: tasks.length, helper: 'Tracked work items', icon: <CheckSquare className="h-5 w-5" /> },
   ];
 
-  if (isCEO) {
+  if (isAdmin) {
     stats.splice(2, 0, { label: 'Roles', value: roles.length, helper: 'Role templates with permissions', icon: <ShieldCheck className="h-5 w-5" /> });
     stats.push({ label: 'Permission rules', value: '5', helper: 'Dynamic access controls', icon: <KeyRound className="h-5 w-5" /> });
   }
@@ -116,8 +116,8 @@ export const DashboardPage = () => {
           {!tasks.length ? <div className="text-sm text-text-muted">No tasks yet. Create one from the Tasks page.</div> : null}
         </div>
       </Card>
-
-      {isCEO ? (
+          
+      {isAdmin ? (
         <Card>
           <div className="text-[13px] uppercase tracking-[0.24em] text-text-muted">Roles</div>
           <h2 className="mt-2 text-lg font-semibold text-text-primary">Permission presets</h2>

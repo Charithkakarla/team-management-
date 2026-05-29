@@ -1,5 +1,4 @@
 // Auth feature: handles login, registration, token creation, and auth routes.
-// Auth feature: handles login, registration, token creation, and auth routes.
 // It keeps the authentication logic and endpoints together.
 // Use this file to understand user sign-in and sign-up.
 import bcrypt from "bcryptjs";
@@ -10,7 +9,7 @@ import { Membership } from "../dataModels/Membership.js";
 import { Role } from "../dataModels/Role.js";
 import { AppError } from "../shared/AppError.js";
 import { asyncHandler } from "../shared/asyncHandler.js";
-import { getAdminEmail, isCEOEmail, isManagerEmail } from "../shared/access.js";
+import { isAdminEmail, isManagerEmail } from "../shared/access.js";
 import { requireAuth } from "../middleware/auth.js";
 
 const createToken = (user) =>
@@ -18,8 +17,7 @@ const createToken = (user) =>
     {
       sub: user._id.toString(),
       email: user.email,
-      isSuperAdmin: isCEOEmail(user.email),
-      isAdmin: isCEOEmail(user.email),
+      isAdmin: isAdminEmail(user.email),
       isManager: isManagerEmail(user.email)
     },
     process.env.JWT_SECRET || "dev-secret",
@@ -30,8 +28,7 @@ const sanitizeUser = (user) => ({
   id: user._id,
   name: user.name,
   email: user.email,
-  isSuperAdmin: isCEOEmail(user.email),
-  isAdmin: isCEOEmail(user.email),
+  isAdmin: isAdminEmail(user.email),
   // isManager here remains the email-rule fallback; call /auth/me for dynamic membership-aware status
   isManager: isManagerEmail(user.email),
   createdAt: user.createdAt,
@@ -51,10 +48,6 @@ export const registerUser = async ({ name, email, password }) => {
   const passwordHash = await bcrypt.hash(password, 10);
   const user = await User.create({ name, email, passwordHash });
 
-  if (isCEOEmail(email)) {
-    process.env.ADMIN_EMAIL = getAdminEmail();
-  }
-
   return { user, token: createToken(user) };
 };
 
@@ -63,12 +56,20 @@ export const loginUser = async ({ email, password }) => {
     throw new AppError("Email and password are required", 400);
   }
 
+  const lookupLabel = `auth:findUser:${email.toLowerCase()}`;
+  console.time(lookupLabel);
   const user = await User.findOne({ email: email.toLowerCase() });
+  console.timeEnd(lookupLabel);
+
   if (!user || !user.passwordHash) {
     throw new AppError("Invalid credentials", 401);
   }
 
+  const bcryptLabel = `auth:bcryptCompare:${email.toLowerCase()}`;
+  console.time(bcryptLabel);
   const isMatch = await bcrypt.compare(password, user.passwordHash);
+  console.timeEnd(bcryptLabel);
+
   if (!isMatch) {
     throw new AppError("Invalid credentials", 401);
   }
@@ -79,9 +80,9 @@ export const loginUser = async ({ email, password }) => {
 export const verifyToken = (token) => jwt.verify(token, process.env.JWT_SECRET || "dev-secret");
 
 export const getCurrentUserFromDb = async (userId) => {
+  console.time(`auth:getCurrent:${userId}`);
   const user = await User.findById(userId);
   if (!user) throw new AppError('User not found', 404);
-
   const memberships = await Membership.find({ userId }).populate('roleId');
   let dynamicIsAdmin = false;
   let dynamicIsManager = false;
@@ -96,12 +97,13 @@ export const getCurrentUserFromDb = async (userId) => {
     }
   }
 
+  console.timeEnd(`auth:getCurrent:${userId}`);
+
   return {
     id: user._id,
     name: user.name,
     email: user.email,
-    isSuperAdmin: isCEOEmail(user.email),
-    isAdmin: isCEOEmail(user.email) || dynamicIsAdmin,
+    isAdmin: isAdminEmail(user.email) || dynamicIsAdmin,
     isManager: dynamicIsManager || isManagerEmail(user.email),
     createdAt: user.createdAt,
     updatedAt: user.updatedAt
